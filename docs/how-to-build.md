@@ -1,15 +1,12 @@
 # How to Build 
 
-## Vivado Project (Optional)
-
-Note - If you are running on an OS such as RHEL7.x, CENTOS 7.x or UBUNTU 16.x which does not include gcc v6 or higher, you will need to execute this step so that you can enable the
-Yocto buildtools-extended option in the Petalinux configuration (see below).
+## Vivado Project
 
 1. Change directory and launch Vivado GUI
 
     ```console
     $ cd ./vivado
-    $ vivado
+    $ <Path-to-Xilinx-tools>/2025.2/Vivado/bin/vivado
     ```
 
 1. Run the following command in the Tcl console to create a Vivado project and generate a block design
@@ -26,74 +23,80 @@ Yocto buildtools-extended option in the Petalinux configuration (see below).
 
 1. In the Export Hardware Platform dialog box, select the Include bitstream check box and export XSA file.
 
-## PetaLinux Project
-
-1. Update Hardware Description (Optional, unless your OS does not have gcc v6 or higher)
+1. Run the sdtgen tool to convert the XSA file to a System Device Tree for the EDF flow.
 
     ```console
-    $ # Change to the petalinux project directory
-    $ cd ../linux/ebaz4205
-    $ # Specify the directory where you exported the XSA file
-    $ # Exit the configuration without any changes
-    $ petalinux-config --get-hw-description=../../vivado/ebaz4205
+    $ <Path-to-Xilinx-tools>/2025.2/Vivado/bin/sdtgen
+    sdtgen% set_dt_param -dir dts -xsa ebaz4205/ebaz4205_wrapper.xsa
+    sdtgen% generate_sdt
+    sdtgen% exit
     ```
 
-    If you are running on an OS such as RHEL7.x, CENTOS 7.x or UBUNTU 16.x which does not include gcc v6 or higher, you must add the Yocto buildtools-extended configuration option.
+## AMD EDF Project
+
+1. Download AMD EDF code
 
     ```console
-    $ petalinux-config --get-hw-description=../../vivado/ebaz4205
-    $ # Navigate to Yocto settings -> Enable Buildtools Extended and press Y to enable
-    $ # Exit the configuration, saving changes
+    $ # Change to the EDF project directory
+    $ cd ../yocto/edf
+    $ # Use the Git repo tool to download a copy of the 2025.2 AMD EDF repository 
+    $ repo init -u https://github.com/Xilinx/yocto-manifests.git -b rel-v2025.2 -m default-edf.xml
+    $ repo sync
+    $ # Run envoronment setup script.  This script exits inside the 'build' sub-directory
+    $ # so move up a directory level after running.
+    $ source edf-init-build-env
+    $ cd ..
+    ```
+
+1. Customise environment
+
+    ```console
+    $ # Unpack the tar file with board customisations
+    $ tar -xzvf meta-ebaz4205.tgz
+    $ # Add the customisations to the flow
+    $ bitbake-layers add-layer sources/meta-ebaz4205
+    $ # On some new Linux distros, the gen-machine-conf script used in the next step will fail due to AppArmor
+    $ # premission issues.  To work around this, temporarily disable AppArmor with the following command:
+    $ echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+    $ # Generate a machine configuration from the System Device Tree
+    $ sources/meta-xilinx/gen-machine-conf/gen-machine-conf parse-sdt --hw-description ../../vivado/dts -c build/conf -l build/conf/local.conf --machine-name ebaz4205
+    $ # Unpack the tar file with config file customisations
+    $ tar -xzvf local.conf.tgz
     ```
 
 1. Build Linux
 
     ```console
-    $ # Change to the petalinux project directory
-    $ cd ../linux/ebaz4205
-    $ # Before building, fix typo in system_conf.dtsi
-    $ petalinux-build -c device-tree -x do_configure
-    $ # Edit components/plnx_workspace/device-tree/device-tree/system-conf.dtsi
-    $ # On line 18, change 'ps7_nand_0' to 'nfc0'
-    $ # Build
-    $ petalinux-build
-    $ # Make BOOT.BIN
-    $ ./make_BOOT.BIN.sh
+    $ # Start by building the boot.bin file
+    $ bitbake xilinx-bootbin
+    $ # Build the root file system.
+    $ # First, edit local.conf to change variable MACHINE from "ebaz4205" to "amd-cortexa9thf-neon-common"
+    $ sed -i 's/ebaz4205/amd-cortexa9thf-neon-common/' build/conf/local.conf 
+    $ bitbake edf-linux-disk-image
     ```
+
+    Ignore any warning about "User fwupd-refresh has never been defined"
 
 ## microSD card
 
-1. Create two partitions on the microSD card using fdisk or the like
-
-    |Device|Boot|Size|Type|
-    |----|----|---:|----|
-    |/dev/sdX1|*|16MByte+|FAT32|
-    |/dev/sdX2||128MByte+|EXT4|
+- The build process results in a OpenEmbedded image file located at build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic.  This image file contains 4 partitions:
 
     ```console
-    $ # Change to the petalinux project directory
-    $ cd ./linux/ebaz4205
-    $ cd ./images/linux
-    $ # Unmount all microSD card partitions
-    $ sudo umount /path/to/mountpoint
-    $ # Create two partitions
-    $ sudo fdisk /dev/sdX
-    $ sudo mkfs.msdos -n ZYNQ_BOOT /dev/sdX1
-    $ sudo mkfs.ext4 /dev/sdX2
+    $ wic ls build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic
+    Num     Start        End          Size      Fstype
+     1         16384    536887295    536870912  fat32
+     2     536887296   1073758207    536870912  ext4
+     3    1073758208   7516209151   6442450944  ext4
+     4    7516209152   8589950975   1073741824  fat32
     ```
 
-1. Copy the files to the first partition and write rootfs to the second partition
+    Partition #1 is labeled "esp" and needs to contain the boot.bin file.  The boot.bin file is located at build/tmp/deploy/images/ebaz4205/boot.bin and needs to be copied to Partition #1 before the image file is flashed to the microSD card.  Partition #2 is labeled "boot" and contains the boot.scr file and kernel image.  Partition #3 is labeled "root" and contains the root file system.  Partition #4 is labeled "storage" and is empty. 
 
     ```console
-    $ # Mount the first partition and copy the files
-    $ sudo mount /dev/sdX1 /path/to/mountpoint
-    $ cp BOOT.BIN boot.scr image.ub /path/to/mountpoint
-    $ sudo umount /path/to/mountpoint
-    $ # Write rootfs. If the second partition is mounted, unmount it before dd command
-    $ sudo umount /dev/sdX2
-    $ sudo dd if=rootfs.ext4 of=/dev/sdX2
-    $ sudo resize2fs /dev/sdX2
+    $ # Copy boot.bin to Partition #1 of image file
+    $ wic cp build/tmp/deploy/images/ebaz4205/boot.bin build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic:1
+    $ # Flash image file to microSD card
+    $ sudo dd if=build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic of=/dev/mmcblkX bs=4M
     ```
 
-    If you are running on an OS whose e2fsprogs package is v1.42 or earlier (e.g. CENTOS 7.x), the resize2fs command will not work.  Consider downloading and building e2fsprogs v1.43 from source.
-
+    The partition labeled "storage" is not needed and can be deleted if desired using parted or gparted.  The root partition can then be expanded to use the remaining microSD card space using gparted.

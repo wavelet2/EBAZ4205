@@ -1,5 +1,0 @@
-PETALINUX_VER=2023.2
-VALIDATE_HW_CHKSUM=1
-HARDWARE_PATH=/home/steedman/EBAZ4205/vivado/ebaz4205/ebaz4205_wrapper.xsa
-HDF_EXT=xsa
-YOCTO_SDK=a9a66fe3348fe7cfe61d2bbfbaf53942
