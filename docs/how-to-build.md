@@ -2,28 +2,28 @@
 
 ## Vivado Project
 
-1. Change directory and launch Vivado GUI
+1. Change directory and launch Vivado GUI.
 
     ```console
     $ cd ./vivado
     $ <Path-to-Xilinx-tools>/2025.2/Vivado/bin/vivado
     ```
 
-1. Run the following command in the Tcl console to create a Vivado project and generate a block design
+1. Run the following command in the Tcl console to create a Vivado project and generate a block design:
 
     ```console
     source ./ebaz4205.tcl
     ```
 
-1. Run implementation from Flow Navigator
+1. Run Implementation from Flow Navigator.  Click OK if prompted to run Synthesis first.
 
-1. Run generate bitstream from Flow Navigator
+1. Run Generate Bitstream from Flow Navigator.
 
 1. In Vivado, select File -> Export -> Export Hardware
 
 1. In the Export Hardware Platform dialog box, select the Include bitstream check box and export XSA file.
 
-1. Run the sdtgen tool to convert the XSA file to a System Device Tree for the EDF flow.
+1. Exit Vivado GUI and run the sdtgen tool to convert the XSA file to a System Device Tree for the EDF flow.
 
     ```console
     $ <Path-to-Xilinx-tools>/2025.2/Vivado/bin/sdtgen
