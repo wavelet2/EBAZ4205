@@ -3,6 +3,7 @@
 #include "pl.dtsi"
 #include "pcw.dtsi"
 / {
+	vivado-version = "2026.2";
 	device_id = "7z010";
 	slrcount = <1>;
 	family = "Zynq";

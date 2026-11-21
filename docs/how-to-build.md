@@ -6,7 +6,7 @@
 
     ```console
     $ cd ./vivado
-    $ <Path-to-Xilinx-tools>/2025.2/Vivado/bin/vivado
+    $ <Path-to-Xilinx-tools>/2026.2/Vivado/bin/vivado
     ```
 
 1. Run the following command in the Tcl console to create a Vivado project and generate a block design:
@@ -26,7 +26,7 @@
 1. Exit Vivado GUI and run the sdtgen tool to convert the XSA file to a System Device Tree for the EDF flow.
 
     ```console
-    $ <Path-to-Xilinx-tools>/2025.2/Vivado/bin/sdtgen
+    $ <Path-to-Xilinx-tools>/2026.2/Vivado/bin/sdtgen
     sdtgen% set_dt_param -dir dts -xsa ebaz4205/ebaz4205_wrapper.xsa
     sdtgen% generate_sdt
     sdtgen% exit
@@ -39,8 +39,8 @@
     ```console
     $ # Change to the EDF project directory
     $ cd ../yocto/edf
-    $ # Use the Git repo tool to download a copy of the 2025.2 AMD EDF repository 
-    $ repo init -u https://github.com/Xilinx/yocto-manifests.git -b rel-v2025.2 -m default-edf.xml
+    $ # Use the Git repo tool to download a copy of the 2026.2 AMD EDF repository 
+    $ repo init -u https://github.com/Xilinx/yocto-manifests.git -b rel-v2026.2 -m default-edf.xml
     $ repo sync
     $ # Run envoronment setup script.  This script exits inside the 'build' sub-directory
     $ # so move up a directory level after running.
@@ -79,22 +79,24 @@
 
 ## microSD card
 
-- The build process results in a OpenEmbedded image file located at build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic.  This image file contains 4 partitions:
+- The build process results in a OpenEmbedded image file located at build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic.  This image file contains 3 partitions:
 
     ```console
-    $ wic ls build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic
+    $ bitbake wic-native
+    $ bitbake wic-native -c addto_recipe_sysroot
+    $ oe-run-native wic-native wic ls build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic
+    Getting sysroot...
     Num     Start        End          Size      Fstype
-     1         16384    536887295    536870912  fat32
-     2     536887296   1073758207    536870912  ext4
-     3    1073758208   7516209151   6442450944  ext4
-     4    7516209152   8589950975   1073741824  fat32
+     1             8      2097159   1073741824  fat32
+     2       2097160      6291463   2147483648  fat32
+     3       6291464      8557663   1160294400  ext4
     ```
 
-    Partition #1 is labeled "esp" and needs to contain the boot.bin file.  The boot.bin file is located at build/tmp/deploy/images/ebaz4205/boot.bin and needs to be copied to Partition #1 before the image file is flashed to the microSD card.  Partition #2 is labeled "boot" and contains the boot.scr file and kernel image.  Partition #3 is labeled "root" and contains the root file system.  Partition #4 is labeled "storage" and is empty. 
+    Partition #1 is labeled "esp" and contains the boot.scr file.  It also needs to contain the boot.bin file.  The boot.bin file is located at build/tmp/deploy/images/ebaz4205/boot.bin and needs to be copied to Partition #1 before the image file is flashed to the microSD card.  Partition #2 is labeled "storage" and is empty.  Partition #3 is labeled "root" and contains the root file system.
 
     ```console
     $ # Copy boot.bin to Partition #1 of image file
-    $ wic cp build/tmp/deploy/images/ebaz4205/boot.bin build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic:1
+    $ oe-run-native wic-native wic cp build/tmp/deploy/images/ebaz4205/boot.bin build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic:1
     $ # Flash image file to microSD card
     $ sudo dd if=build/tmp/deploy/images/amd-cortexa9thf-neon-common/edf-linux-disk-image-amd-cortexa9thf-neon-common.rootfs.wic of=/dev/mmcblkX bs=4M
     ```

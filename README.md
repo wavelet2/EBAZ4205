@@ -2,9 +2,9 @@
 
 ## Description
 
-This repository contains Vivado and AMD EDF (formerly PetaLinux) projects for the Zynq EBAZ4205 board.  It is based on the EBAZ4205 git repository by KeitetsuWorks, updated for v2025.2 of the AMD tools and with fixes for the operation of the tactile switches S2 and S3.  The default build of Linux in this repository includes the package management tools so that additional components may be installed with the dnf command after booting.
+This repository contains Vivado and AMD EDF (formerly PetaLinux) projects for the Zynq EBAZ4205 board.  It is based on the EBAZ4205 git repository by KeitetsuWorks, updated for v2026.2 of the AMD tools and with fixes for the operation of the tactile switches S2 and S3.  The default build of Linux in this repository includes the package management tools so that additional components may be installed with the dnf command after booting.
 
-Branches '202n.n' contain files for v202n.n of Vivado/PetaLinux.  Branch 'main' contains files for v2025.2 of Vivado/AMD EDF.
+Branches '202n.n' contain files for v202n.n of Vivado/PetaLinux.  Branch 'main' contains files for v2026.2 of Vivado/AMD EDF.
 
 ## Requirement
 
@@ -19,7 +19,7 @@ Branches '202n.n' contain files for v202n.n of Vivado/PetaLinux.  Branch 'main' 
 
 ### Software
 
-* AMD Vivado 2025.2
+* AMD Vivado 2026.2
 * Git repo tool [https://gerrit.googlesource.com/git-repo](https://gerrit.googlesource.com/git-repo)
 
 ## How to Build 
